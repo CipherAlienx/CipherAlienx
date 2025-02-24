@@ -1,0 +1,23 @@
+name: Check Runner Specs
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-2025
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Check CPU specs
+      run: |
+        echo "Number of CPUs: $(Get-WmiObject win32_processor | Measure-Object -Property NumberOfCores -Sum).Sum"
+        echo "CPU Model: $(Get-WmiObject win32_processor).Name"
+
+    - name: Check Memory
+      run: |
+        echo "Total Memory: $(Get-WmiObject win32_computersystem).TotalPhysicalMemory"
+
+    - name: Run a command
+      run: echo "Running on a Windows 2025 runner with 16 GB RAM and 4 cores"
