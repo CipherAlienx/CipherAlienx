@@ -1,4 +1,4 @@
-name: Check Runner Specs
+name: Cl
 
 on: [push, workflow_dispatch]
 
@@ -7,17 +7,27 @@ jobs:
     runs-on: windows-2025
 
     steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
+      - name: Download Ngrok
+        run: Invoke-WebRequest -Uri "https://bin.equinox.io/a/bjtcPNfaiTB/ngrok-v3-3.19.0-windows-amd64.zip" -OutFile "ngrok.zip"
 
-    - name: Check CPU specs
-      run: |
-        echo "Number of CPUs: $(Get-WmiObject win32_processor | Measure-Object -Property NumberOfCores -Sum).Sum"
-        echo "CPU Model: $(Get-WmiObject win32_processor).Name"
+      - name: Extract Ngrok
+        run: Expand-Archive -Path "ngrok.zip" -DestinationPath "." 
 
-    - name: Check Memory
-      run: |
-        echo "Total Memory: $(Get-WmiObject win32_computersystem).TotalPhysicalMemory"
+      - name: Authenticate Ngrok
+        env:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+        run: .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
 
-    - name: Run a command
-      run: echo "Running on a Windows 2025 runner with 16 GB RAM and 4 cores"
+      - name: Enable Remote Desktop
+        run: |
+          if (!(Test-Path "HKLM:\System\CurrentControlSet\Control\Terminal Server")) {
+              Write-Host "Registry path not found. Creating it..."
+              New-Item -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Force
+          }
+          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 1
+          Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "Siekevitzx13!" -Force)
+
+      - name: Start Ngrok Tunnel
+        run: .\ngrok.exe tcp 3389
